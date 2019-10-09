@@ -54,6 +54,10 @@
  *
  */
 
+typedef enum _boolean {
+	FALSE,
+	TRUE
+} bool;
 
 char tokenContents[MAX_NR_TOKENS][MAX_TOKEN_LEN];
 
@@ -73,17 +77,20 @@ static int parse_command(char *command, int *nr_tokens, char *tokens[])
 
 	while (command[i] != '\0')
 	{
+		bool currentIsNotCharacter = ((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n') || (command[i] == '\r'));
+		bool nextIsNotCharacter = ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n') || (command[i + 1] == '\r'));
+
 
 		// ' \t' 
 		// '\ta'
-		if ((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n') || (command[i] == '\r'))
+		if (currentIsNotCharacter) 
 		{
 			i++;
 			continue;
 		}
 		else {
 			// 'a\t'
-			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n') || (command[i+1] == '\r'))
+			if (nextIsNotCharacter)
 			{
 				tokenContents[nridx][lenidx] = command[i];
 				lenidx = 0;
