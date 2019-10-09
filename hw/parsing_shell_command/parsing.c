@@ -70,20 +70,39 @@ static int parse_command(char *command, int *nr_tokens, char *tokens[])
 	
 	memset(tokenContents, 0, sizeof(tokenContents));
 
-	while (command[i] != '\0') {
+	while (command[i] != '\0')
+	{
 
 		// ' \t' 
 		// '\ta'
-		if (((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n'))) {
+		if (((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n'))) 
+		{
 			i++;
 			continue;
 		}
 		else {
 			// 'a\t'
-			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n')) {
+			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n')) 
+			{
+				tokenContents[nridx][lenidx] = command[i];
+				lenidx = 0;
+				//null일 때
+				if (command[i + 1] == '\0') 
+				{
+					tokens[nridx] = tokenContents + nridx;
+					(*nr_tokens)++;
+				}
+				//null이 아닐때
+				else 
+				{
+					tokens[nridx] = tokenContents + nridx++;
+					(*nr_tokens)++;
+				}
+
 			}
 			// 'ab'
-			else {
+			else
+			{
 				tokenContents[nridx][lenidx++] = command[i];
 			}
 		}
