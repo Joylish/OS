@@ -53,16 +53,29 @@
  *	Return 0 after filling in @nr_tokens and @tokens[] properly
  *
  */
+
+
 static int parse_command(char *command, int *nr_tokens, char *tokens[])
 {
 	/* TODO
 	 * Followings are example code. You should delete them and implement 
 	 * your own code here
 	 */
-	tokens[0] = "hello";
-	tokens[1] = "world";
-	*nr_tokens = 2;
+	
+	
 
+	while (command[i] != '\0') {
+
+		// ' \t' 
+		if (((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n'))) {
+			i++;
+			continue;
+		}
+		else {
+			
+		}
+		i++;
+	}
 	return 0;
 }
 
