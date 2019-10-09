@@ -54,6 +54,7 @@
  *
  */
 
+
 char tokenContents[MAX_NR_TOKENS][MAX_TOKEN_LEN];
 
 static int parse_command(char *command, int *nr_tokens, char *tokens[])
@@ -75,14 +76,14 @@ static int parse_command(char *command, int *nr_tokens, char *tokens[])
 
 		// ' \t' 
 		// '\ta'
-		if (((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n'))) 
+		if ((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n') || (command[i] == '\r'))
 		{
 			i++;
 			continue;
 		}
 		else {
 			// 'a\t'
-			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n')) 
+			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n') || (command[i+1] == '\r'))
 			{
 				tokenContents[nridx][lenidx] = command[i];
 				lenidx = 0;
