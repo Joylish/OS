@@ -54,6 +54,7 @@
  *
  */
 
+char tokenContents[MAX_NR_TOKENS][MAX_TOKEN_LEN];
 
 static int parse_command(char *command, int *nr_tokens, char *tokens[])
 {
@@ -61,18 +62,30 @@ static int parse_command(char *command, int *nr_tokens, char *tokens[])
 	 * Followings are example code. You should delete them and implement 
 	 * your own code here
 	 */
+	// 현재 잘라진 token 개수의 index
+	int nridx = 0;
+	//커맨드 (입력문자열) 1줄에서의 index
+	int lenidx = 0;
+	int i = 0;
 	
-	
+	memset(tokenContents, 0, sizeof(tokenContents));
 
 	while (command[i] != '\0') {
 
 		// ' \t' 
+		// '\ta'
 		if (((command[i] == '\0') || (command[i] == 32) || (command[i] == 9) || (command[i] == '\n'))) {
 			i++;
 			continue;
 		}
 		else {
-			
+			// 'a\t'
+			if ((command[i + 1] == '\0') || (command[i + 1] == 32) || (command[i + 1] == 9) || (command[i + 1] == '\n')) {
+			}
+			// 'ab'
+			else {
+				tokenContents[nridx][lenidx++] = command[i];
+			}
 		}
 		i++;
 	}
