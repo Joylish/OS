@@ -214,7 +214,36 @@ struct scheduler fifo_scheduler = {
  ***********************************************************************/
 static struct process *sjf_schedule(void)
 {
-	
+	struct process *next = NULL;
+
+	if (!current || current->status == PROCESS_WAIT)
+	{
+		goto pick_next;
+	}
+
+	if (current->age < current->lifespan)
+	{
+		return current;
+	}
+
+pick_next:
+	if (!list_empty(&readyqueue))
+	{
+		int min = 100000;
+		struct process *tmp = NULL;
+		list_for_each_entry(tmp, &readyqueue, list)
+		{
+			if (min > tmp->lifespan)
+			{
+				min = tmp->lifespan;
+				next = tmp;
+			}
+		}
+		list_del_init(&next->list);
+	}
+
+	/* Return the next process to run */
+	return next;
 }
 
 struct scheduler sjf_scheduler = {
@@ -255,10 +284,10 @@ static struct process *rr_schedule(void)
 }
 
 struct scheduler rr_scheduler = {
-	.name = "Round-Robin",
-	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
-	.release = fcfs_release,
-	.schedule = rr_schedule /* Use the default FCFS release() */
+	// .name = "Round-Robin",
+	// .acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	// .release = fcfs_release,
+	// .schedule = rr_schedule /* Use the default FCFS release() */
 	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 
