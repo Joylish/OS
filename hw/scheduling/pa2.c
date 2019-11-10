@@ -261,6 +261,7 @@ struct scheduler sjf_scheduler = {
 
 static struct process *srtf_schedule(void)
 {
+
 	struct process *next = NULL;
 
 	if (current && current->age < current->lifespan)
@@ -305,8 +306,7 @@ struct scheduler srtf_scheduler = {
 static struct process *rr_schedule(void)
 {
 	struct process *next = NULL;
-
-	if (current && current->age < current->lifespan)
+	if (current && current->status != PROCESS_WAIT && current->age < current->lifespan)
 	{
 		list_add_tail(&current->list, &readyqueue);
 	}
