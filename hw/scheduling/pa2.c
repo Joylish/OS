@@ -280,14 +280,26 @@ struct scheduler srtf_scheduler = {
  ***********************************************************************/
 static struct process *rr_schedule(void)
 {
-	
+	struct process *next = NULL;
+
+	if (current && current->age < current->lifespan)
+	{
+		list_add_tail(&current->list, &readyqueue);
+	}
+	if (!list_empty(&readyqueue))
+	{
+		next = list_first_entry(&readyqueue, struct process, list);
+		list_del_init(&next->list);
+	}
+	/* Return the next process to run */
+	return next;
 }
 
 struct scheduler rr_scheduler = {
-	// .name = "Round-Robin",
-	// .acquire = fcfs_acquire, /* Use the default FCFS acquire() */
-	// .release = fcfs_release,
-	// .schedule = rr_schedule /* Use the default FCFS release() */
+	.name = "Round-Robin",
+	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
+	.release = fcfs_release,
+	.schedule = rr_schedule /* Use the default FCFS release() */
 	/* Obviously, you should implement rr_schedule() and attach it here */
 };
 
