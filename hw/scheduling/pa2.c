@@ -478,6 +478,7 @@ struct scheduler prio_scheduler = {
 /***********************************************************************
  * Priority scheduler with priority inheritance protocol
  ***********************************************************************/
+
 bool pip_acquire(int resource_id)
 {
 	struct resource *r = resources + resource_id;
@@ -492,7 +493,7 @@ bool pip_acquire(int resource_id)
 	}
 
 	/* OK, this resource is taken by @r->owner. */
-	if(r->owner->prio_orig != r->owner->prio)
+	if (r->owner->prio_orig != r->owner->prio)
 	{
 		r->owner->prio = current->prio;
 	}
@@ -614,10 +615,10 @@ pick_next:
 
 struct scheduler pip_scheduler = {
 	 .name = "Priority + Priority Inheritance Protocol",
-	.schedule = pip_schedule,
-	.acquire = pip_acquire,
-	.release = pip_release
-	// /**
+	// .schedule = pip_schedule,
+	// .acquire = pip_acquire,
+	// .release = pip_release
+	// // /**
 	//  * Implement your own acqure/release function too to make priority
 	//  * scheduler correct.
 	//  */
