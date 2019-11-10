@@ -276,7 +276,7 @@ static struct process *srtf_schedule(void)
 
 		list_for_each_entry(tmp, &readyqueue, list)
 		{
-			int remainTime = tmp->lifespan - tmp->age;
+			int remainTime =(int)( tmp->lifespan - tmp->age);
 			if (min > remainTime)
 			{
 				min = remainTime;
@@ -331,18 +331,143 @@ struct scheduler rr_scheduler = {
 /***********************************************************************
  * Priority scheduler
  ***********************************************************************/
-
-
-
-static struct process *prio_schedule(void)
+bool prio_acquire(int resource_id)
 {
+	struct resource *r = resources + resource_id;
+
+	if (!r->owner)
+	{
+		/* This resource is not owned by any one. Take it! */
+		r->owner = current;
+		return true;
+	}
+
+	/* OK, this resource is taken by @r->owner. */
+
+	/* Update the current process state */
+	current->status = PROCESS_WAIT;
+
+	/* And append current to waitqueue */
+	list_add_tail(&current->list, &r->waitqueue);
+
+	/**
+	 * And return false to indicate the resource is not available.
+	 * The scheduler framework will soon call schedule() function to
+	 * schedule out current and to pick the next process to run.
+	 */
+	return false;
+}
+
+void prio_release(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	/* Ensure that the owner process is releasing the resource */
+	assert(r->owner == current);
+
+	/* Un-own this resource */
+	r->owner = NULL;
+
+	/* Let's wake up ONE waiter (if exists) that came first */
+	if (!list_empty(&r->waitqueue))
+	{
+		struct process * waiter = NULL;
+		//struct process *waiter =
+			//list_first_entry(&r->waitqueue, struct process, list);
+		int maxprio = -1;
+		struct process *tmp = NULL;
+
+		list_for_each_entry(tmp, &r->waitqueue, list)
+		{
+			if (maxprio < (int)tmp->prio)
+			{
+				maxprio = (int)tmp->prio;
+				waiter = tmp;
+			}
+		}
+		/**
+		 * Ensure the waiter  is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
+
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
+
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
+
+		/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
+	}
+}
+
+static struct process *prio_schedule(void){
+
+	struct process *next = NULL;
+	int max = -1;
+	struct process * tmp = NULL;
+
+	if (!current || current->status == PROCESS_WAIT)
+	{
+		goto pick_next;
+	}
+
+	/* The current process has remaining lifetime. Schedule it again */
+	if (current->age < current->lifespan)
+	{
+		list_add_tail(&current->list, &readyqueue);
+	}
+
+pick_next:
+	/* Let's pick a new process to run next */
+
+	if (!list_empty(&readyqueue))
+	{
+		/**
+		 * If the ready queue is not empty, pick the first process
+		 * in the ready queue
+		 */
+
+		list_for_each_entry(tmp, &readyqueue, list)
+		{
+			//printf("tmp pid : %d, %d, %d\n", tmp->pid, tmp->prio, max);
+			if (max <(int) tmp->prio)
+			{
+				max = tmp->prio;
+				next = tmp;
+				//printf("next pid : %d\n", next->pid);
+			}
+		}
+		//next = list_first_entry(&readyqueue, struct process, list);
+
+		/**
+		 * Detach the process from the ready queue. Note we use list_del_init()
+		 * instead of list_del() to maintain the list head tidy. Otherwise,
+		 * the framework will complain (assert) on process exit.
+		 */
+		list_del_init(&next->list);
+	}
+
+	/* Return the next process to run */
+	return next;
+
+
+
 }
 
 struct scheduler prio_scheduler = {
 	.name = "Priority",
-	// .schedule = prio_schedule,
-	// .acquire = prio_acquire,
-	// .release = prio_release
+	.schedule = prio_schedule,
+	.acquire = prio_acquire,
+	.release = prio_release
 	/**
 	 * Implement your own acqure/release function to make priority
 	 * scheduler correct.
@@ -353,18 +478,145 @@ struct scheduler prio_scheduler = {
 /***********************************************************************
  * Priority scheduler with priority inheritance protocol
  ***********************************************************************/
+bool pip_acquire(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+	struct process *tmp = NULL;
 
+	if (!r->owner)
+	{
+		/* This resource is not owned by any one. Take it! */
+
+		r->owner = current;
+		return true;
+	}
+
+	/* OK, this resource is taken by @r->owner. */
+	if(r->owner->prio_orig != r->owner->prio)
+	{
+		r->owner->prio = current->prio;
+	}
+	if (current->prio > r->owner->prio)
+	{
+		r->owner->prio_orig = r->owner->prio;
+		r->owner->prio = current->prio;
+	}
+
+	/* Update the current process state */
+	current->status = PROCESS_WAIT;
+
+	/* And append current to waitqueue */
+	list_add_tail(&current->list, &r->waitqueue);
+
+	/**
+	 * And return false to indicate the resource is not available.
+	 * The scheduler framework will soon call schedule() function to
+	 * schedule out current and to pick the next process to run.
+	 */
+	return false;
+}
+
+void pip_release(int resource_id)
+{
+	struct resource *r = resources + resource_id;
+
+	/* Ensure that the owner process is releasing the resource */
+	assert(r->owner == current);
+
+	/* Un-own this resource */
+	r->owner->prio = r->owner->prio_orig;
+	r->owner = NULL;
+
+	/* Let's wake up ONE waiter (if exists) that came first */
+	if (!list_empty(&r->waitqueue))
+	{
+		struct process *waiter = NULL;
+		//struct process *waiter =
+		//list_first_entry(&r->waitqueue, struct process, list);
+		int maxprio = -1;
+		struct process *tmp = NULL;
+
+		list_for_each_entry(tmp, &r->waitqueue, list)
+		{
+			if (maxprio < (int)tmp->prio)
+			{
+				maxprio = (int)tmp->prio;
+				waiter = tmp;
+			}
+		}
+		/**
+		 * Ensure the waiter  is in the wait status
+		 */
+		assert(waiter->status == PROCESS_WAIT);
+
+		/**
+		 * Take out the waiter from the waiting queue. Note we use
+		 * list_del_init() over list_del() to maintain the list head tidy
+		 * (otherwise, the framework will complain on the list head
+		 * when the process exits).
+		 */
+		list_del_init(&waiter->list);
+
+		/* Update the process status */
+		waiter->status = PROCESS_READY;
+
+		/**
+		 * Put the waiter process into ready queue. The framework will
+		 * do the rest.
+		 */
+		list_add_tail(&waiter->list, &readyqueue);
+	}
+}
 
 static struct process *pip_schedule(void)
 {
-	
+	struct process *next = NULL;
+	int max = -1;
+	struct process *tmp = NULL;
+
+	if (!current || current->status == PROCESS_WAIT)
+	{
+		goto pick_next;
+	}
+
+	/* The current process has remaining lifetime. Schedule it again */
+	if (current->age < current->lifespan)
+	{
+		list_add_tail(&current->list, &readyqueue);
+	}
+
+pick_next:
+	/* Let's pick a new process to run next */
+
+	if (!list_empty(&readyqueue))
+	{
+		/**
+		 * If the ready queue is not empty, pick the first process
+		 * in the ready queue
+		 */
+
+		list_for_each_entry(tmp, &readyqueue, list)
+		{
+			//printf("tmp pid : %d, %d, %d\n", tmp->pid, tmp->prio, max);
+			if (max < (int)tmp->prio)
+			{
+				max = tmp->prio;
+				next = tmp;
+				//printf("next pid : %d\n", next->pid);
+			}
+		}
+		list_del_init(&next->list);
+	}
+
+	/* Return the next process to run */
+	return next;
 }
 
 struct scheduler pip_scheduler = {
 	 .name = "Priority + Priority Inheritance Protocol",
-	// .schedule = pip_schedule,
-	// .acquire = pip_acquire,
-	// .release = pip_release
+	.schedule = pip_schedule,
+	.acquire = pip_acquire,
+	.release = pip_release
 	// /**
 	//  * Implement your own acqure/release function too to make priority
 	//  * scheduler correct.
