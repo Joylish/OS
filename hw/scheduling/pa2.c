@@ -52,7 +52,6 @@ extern unsigned int ticks;
  */
 extern bool quiet;
 
-
 /***********************************************************************
  * Default FCFS resource acquision function
  *
@@ -66,7 +65,8 @@ bool fcfs_acquire(int resource_id)
 {
 	struct resource *r = resources + resource_id;
 
-	if (!r->owner) {
+	if (!r->owner)
+	{
 		/* This resource is not owned by any one. Take it! */
 		r->owner = current;
 		return true;
@@ -108,9 +108,10 @@ void fcfs_release(int resource_id)
 	r->owner = NULL;
 
 	/* Let's wake up ONE waiter (if exists) that came first */
-	if (!list_empty(&r->waitqueue)) {
+	if (!list_empty(&r->waitqueue))
+	{
 		struct process *waiter =
-				list_first_entry(&r->waitqueue, struct process, list);
+			list_first_entry(&r->waitqueue, struct process, list);
 
 		/**
 		 * Ensure the waiter  is in the wait status
@@ -135,8 +136,6 @@ void fcfs_release(int resource_id)
 		list_add_tail(&waiter->list, &readyqueue);
 	}
 }
-
-
 
 #include "sched.h"
 
@@ -259,9 +258,35 @@ struct scheduler sjf_scheduler = {
 /***********************************************************************
  * SRTF scheduler
  ***********************************************************************/
+
 static struct process *srtf_schedule(void)
 {
-	
+	struct process *next = NULL;
+
+	if (current && current->age < current->lifespan)
+	{
+		list_add_tail(&current->list, &readyqueue);
+	}
+
+	if (!list_empty(&readyqueue))
+	{
+		int min = 100000;
+		struct process *tmp = NULL;
+
+		list_for_each_entry(tmp, &readyqueue, list)
+		{
+			int remainTime = tmp->lifespan - tmp->age;
+			if (min > remainTime)
+			{
+				min = remainTime;
+				next = tmp;
+			}
+		}
+		list_del_init(&next->list);
+	}
+
+	/* Return the next process to run */
+	return next;
 }
 
 struct scheduler srtf_scheduler = {
@@ -269,11 +294,10 @@ struct scheduler srtf_scheduler = {
 	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
 	.release = fcfs_release,
 	.schedule = srtf_schedule /* Use the default FCFS release() */
-	/* You need to check the newly created processes to implement SRTF.
+							  /* You need to check the newly created processes to implement SRTF.
 	 * Use @forked() callback to mark newly created processes */
-	/* Obviously, you should implement srtf_schedule() and attach it here */
+							  /* Obviously, you should implement srtf_schedule() and attach it here */
 };
-
 
 /***********************************************************************
  * Round-robin scheduler
@@ -295,20 +319,30 @@ static struct process *rr_schedule(void)
 	return next;
 }
 
+
 struct scheduler rr_scheduler = {
 	.name = "Round-Robin",
+	.schedule = rr_schedule,
 	.acquire = fcfs_acquire, /* Use the default FCFS acquire() */
-	.release = fcfs_release,
-	.schedule = rr_schedule /* Use the default FCFS release() */
-	/* Obviously, you should implement rr_schedule() and attach it here */
+	.release = fcfs_release, /* Use the default FCFS release() */
+							 /* Obviously, you should implement rr_schedule() and attach it here */
 };
 
 /***********************************************************************
  * Priority scheduler
  ***********************************************************************/
+
+
+
+static struct process *prio_schedule(void)
+{
+}
+
 struct scheduler prio_scheduler = {
 	.name = "Priority",
-	// .schedule = prio_schedule
+	// .schedule = prio_schedule,
+	// .acquire = prio_acquire,
+	// .release = prio_release
 	/**
 	 * Implement your own acqure/release function to make priority
 	 * scheduler correct.
@@ -316,25 +350,24 @@ struct scheduler prio_scheduler = {
 	/* Implement your own prio_schedule() and attach it here */
 };
 
-static struct process *prio_schedule(void)
-{
-	
-}
-
 /***********************************************************************
  * Priority scheduler with priority inheritance protocol
  ***********************************************************************/
-struct scheduler pip_scheduler = {
-	.name = "Priority + Priority Inheritance Protocol",
-	// .schedule = pip_schedule
-	/**
-	 * Implement your own acqure/release function too to make priority
-	 * scheduler correct.
-	 */
-	/* It goes without saying to implement your own pip_schedule() */
-};
+
 
 static struct process *pip_schedule(void)
 {
 	
 }
+
+struct scheduler pip_scheduler = {
+	 .name = "Priority + Priority Inheritance Protocol",
+	// .schedule = pip_schedule,
+	// .acquire = pip_acquire,
+	// .release = pip_release
+	// /**
+	//  * Implement your own acqure/release function too to make priority
+	//  * scheduler correct.
+	//  */
+	// /* It goes without saying to implement your own pip_schedule() */
+};
