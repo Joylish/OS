@@ -1,3 +1,7 @@
+### pa3 ###
+vm
+*.o
+cscope.out
 
 ### pa ###
 sched
