@@ -16,6 +16,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
+#include <getopt.h>
+#include <sys/wait.h>
 
 #include "types.h"
 #include "list_head.h"
@@ -61,10 +63,34 @@ extern unsigned int alloc_page(void);
  *   @false on unable to translate. This includes the case when @rw is for write
  *   and the @writable of the pte is false.
  */
+
+// ./vm testcases/simple
+// gdb ./vm
+// r 1
 bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
 {
 	/*** DO NOT MODIFY THE PAGE TABLE IN THIS FUNCTION ***/
+	struct process *p = malloc(sizeof(*p));
+	struct pte_directory *pd =NULL;
+	struct pte *pte =NULL;
+	int oidx = vpn / 16;
+	int iidx = vpn % 16;
 
+	if (!current)
+	{
+		current = p;
+	}
+
+	pd = current->pagetable.outer_ptes[oidx];
+
+	if(pd){
+		pte = &pd->ptes[iidx];
+		if (pte->valid && pte -> writable)
+		{
+			*pfn = pte->pfn;
+			return true;			
+		}
+	}
 	return false;
 }
 
@@ -88,7 +114,7 @@ bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
  */
 bool handle_page_fault(enum memory_access_type rw, unsigned int vpn)
 {
-	return true;
+	
 }
 
 
@@ -108,5 +134,6 @@ bool handle_page_fault(enum memory_access_type rw, unsigned int vpn)
  */
 void switch_process(unsigned int pid)
 {
+	
 }
 
