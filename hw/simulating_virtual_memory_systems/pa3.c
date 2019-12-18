@@ -114,7 +114,38 @@ bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
  */
 bool handle_page_fault(enum memory_access_type rw, unsigned int vpn)
 {
+	int oidx = vpn / 16;
+	int iidx = vpn % 16;
+	struct pte_directory *pd = NULL;
+	struct pte *pte =NULL;
 	
+	if (!pd)
+	{
+		pd = malloc(sizeof(*pd));
+		current->pagetable.outer_ptes[oidx] =pd;
+		pte = &pd->ptes[iidx];
+		pte->pfn = alloc_page();
+		pte->valid = true;
+		pte->writable = true;
+	}
+	
+	else if(!pte->valid)
+	{
+		pd = current->pagetable.outer_ptes[oidx];
+		pte = &pd->ptes[iidx];
+		pte->pfn = alloc_page();
+		pte->valid = true;
+		pte->writable = true;
+	}
+	else if (!pte->writable)
+	{
+		pd = current->pagetable.outer_ptes[oidx];
+		pte = &pd->ptes[iidx];
+		pte->pfn = alloc_page();
+		pte->valid = true;
+		pte->writable = true;
+	}
+	return true;
 }
 
 
