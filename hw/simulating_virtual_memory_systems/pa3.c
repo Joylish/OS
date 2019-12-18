@@ -165,6 +165,30 @@ bool handle_page_fault(enum memory_access_type rw, unsigned int vpn)
  */
 void switch_process(unsigned int pid)
 {
+
+	struct process *child = NULL;
+	struct process *tmp = NULL;
+
+	list_add_tail(&current->list, &processes);
+
+	if (!list_empty(&processes))
+	{
+		list_for_each_entry(tmp, &processes, list)
+		{
+			if(tmp->pid == pid)
+			{
+				current = tmp;
+				return;
+			}
+			else
+			{
+					child = malloc(sizeof(*child));
+					child->pagetable = (current->pagetable);
+					return;	
+			}
+		}
+		
+	}
 	
 }
 
