@@ -16,8 +16,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <strings.h>
-#include <getopt.h>
-#include <sys/wait.h>
+#include <memory.h>
+
 
 #include "types.h"
 #include "list_head.h"
@@ -70,7 +70,6 @@ extern unsigned int alloc_page(void);
 bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
 {
 	/*** DO NOT MODIFY THE PAGE TABLE IN THIS FUNCTION ***/
-	struct process *p = malloc(sizeof(*p));
 	struct pte_directory *pd =NULL;
 	struct pte *pte =NULL;
 	int oidx = vpn / 16;
@@ -78,19 +77,23 @@ bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
 
 	if (!current)
 	{
-		current = p;
+		current = malloc(sizeof(struct process));
 	}
 
-	pd = current->pagetable.outer_ptes[oidx];
-
-	if(pd){
-		pte = &pd->ptes[iidx];
-		if (pte->valid && pte -> writable)
+	if (current->pagetable.outer_ptes[oidx])
+	{
+		pte = &(current->pagetable.outer_ptes[oidx])->ptes[iidx];
+		if ( pte->valid )
 		{
+			if ((!pte->writable && rw == WRITE))
+				return false;
 			*pfn = pte->pfn;
-			return true;			
+			return true;
 		}
 	}
+	// printf("pd: %p\n", pd);
+	// printf("pte: %p\n", pte);
+	// printf("translate fails");
 	return false;
 }
 
@@ -114,37 +117,52 @@ bool translate(enum memory_access_type rw, unsigned int vpn, unsigned int *pfn)
  */
 bool handle_page_fault(enum memory_access_type rw, unsigned int vpn)
 {
+	// printf("%d\n",rw);
 	int oidx = vpn / 16;
 	int iidx = vpn % 16;
-	struct pte_directory *pd = NULL;
-	struct pte *pte =NULL;
-	
+	struct pte_directory *pd  = current->pagetable.outer_ptes[oidx];
+	struct pte *pte = &pd->ptes[iidx];
+
 	if (!pd)
 	{
-		pd = malloc(sizeof(*pd));
+		// printf("There is not pd111111\n");
+		pd = malloc(sizeof(struct pte_directory));
 		current->pagetable.outer_ptes[oidx] =pd;
 		pte = &pd->ptes[iidx];
 		pte->pfn = alloc_page();
+		// printf("1. %ud\n", pte->pfn);
 		pte->valid = true;
 		pte->writable = true;
+		// free(pd);
+		// printf("There is not pd2222\n");
+		
 	}
-	
-	else if(!pte->valid)
+	else if(!pte->valid && rw == READ)
 	{
+		// printf("pte is not valid111111\n");
+		
 		pd = current->pagetable.outer_ptes[oidx];
 		pte = &pd->ptes[iidx];
 		pte->pfn = alloc_page();
+		// printf("2. %ud\n", pte->pfn);
 		pte->valid = true;
 		pte->writable = true;
+		// printf("pte is not valid22222\n");
 	}
-	else if (!pte->writable)
+	else if (!pte->writable && rw == WRITE)
 	{
+		// printf("pte is not writable111111\n");
+		
 		pd = current->pagetable.outer_ptes[oidx];
 		pte = &pd->ptes[iidx];
 		pte->pfn = alloc_page();
+
+		// printf("3. %ud\n", pte->pfn);
 		pte->valid = true;
 		pte->writable = true;
+		// printf("pte is not writable22222\n");
 	}
+	// free(pd);
 	return true;
 }
 
@@ -168,6 +186,10 @@ void switch_process(unsigned int pid)
 
 	struct process *child = NULL;
 	struct process *tmp = NULL;
+	struct pte_directory *pd = NULL;
+	struct pte_directory *child_pd = NULL;
+	struct pte *child_pte = NULL;
+	struct pte *pte = NULL;
 
 	list_add_tail(&current->list, &processes);
 
@@ -175,16 +197,37 @@ void switch_process(unsigned int pid)
 	{
 		list_for_each_entry(tmp, &processes, list)
 		{
+			printf("%d\n", tmp->pid);
 			if(tmp->pid == pid)
 			{
 				current = tmp;
+				printf("%d\n",current->pid);
 				return;
 			}
 			else
 			{
-					child = malloc(sizeof(*child));
-					child->pagetable = (current->pagetable);
-					return;	
+				child = malloc(sizeof(struct process));
+				// child_pd = malloc(sizeof(struct pte_directory));
+
+				memcpy(child, current, sizeof(struct process));
+				child->pid = pid;
+				
+				for (int i = 0; i < NR_PTES_PER_PAGE; i++)
+				{
+					pd = child->pagetable.outer_ptes[i];
+					if(!pd) continue;
+					for (int j = 0; j < NR_PTES_PER_PAGE; j++)
+					{
+						pte = &pd->ptes[j];
+						if(!pte) continue;
+
+						// printf("writable? %d %d\n", pte->valid, pte->writable);
+						pte->writable = false;
+					}
+				}
+				current = child;
+				 list_add_tail(&current->list, &processes);
+				// printf("switch");
 			}
 		}
 		
